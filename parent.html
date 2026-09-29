@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>每日報報｜寶可夢讀報成果分享</title>
+  <style>
+    :root {
+      --poke-red: #ee1515;
+      --poke-dark-red: #c51111;
+      --poke-yellow: #ffcb05;
+      --poke-gold: #f59e0b;
+      --poke-blue: #2563eb;
+      --poke-dark: #1e293b;
+      --poke-bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 16px 36px;
+      line-height: 1.6;
+      font-family: system-ui, "Noto Sans TC", sans-serif;
+      color: var(--poke-dark);
+      background: linear-gradient(180deg, #fff5f5 0%, #f0f7ff 100%);
+      min-height: 100vh;
+    }
+    main { width: min(800px, 100%); margin: 0 auto; }
+    header {
+      padding: 24px 20px 20px;
+      border: 2px solid #fed7aa;
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow: 0 4px 16px rgba(238, 21, 21, 0.06);
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #ee1515 0%, #ee1515 48%, #ffffff 48%, #ffffff 52%, #1e293b 52%, #1e293b 100%);
+    }
+    h1 {
+      margin: 0;
+      color: var(--poke-dark-red);
+      font-size: 24px;
+      line-height: 1.3;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .intro { margin: 8px 0 0; color: #64748b; font-size: 14px; }
+    .privacy {
+      margin: 14px 0 0;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: #fef2f2;
+      border: 1px solid #fee2e2;
+      color: #991b1b;
+      font-size: 12px;
+    }
+    .wall-panel {
+      margin-top: 20px;
+      padding: 20px 16px;
+      border: 2px solid var(--border-color);
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    }
+    .wall-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    h2 {
+      margin: 0;
+      color: var(--poke-dark);
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .refresh {
+      flex: 0 0 auto;
+      padding: 8px 16px;
+      border: 2px solid var(--poke-red);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--poke-red);
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .refresh:hover { background: var(--poke-red); color: #fff; }
+    .refresh:disabled { opacity: .5; cursor: wait; }
+    .status { min-height: 1.4em; margin: 0 0 10px; color: #64748b; font-size: 13px; }
+    .status.error { color: #dc2626; font-weight: 600; }
+    .wall-list {
+      display: grid;
+      gap: 14px;
+      height: 840px;
+      max-height: 78vh;
+      min-height: 300px;
+      overflow-y: auto;
+      padding: 4px 6px 4px 2px;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+    }
+    .wall-list.empty { height: auto; min-height: 0; }
+    
+    /* 寶可夢卡片風格 */
+    .share-card {
+      padding: 16px;
+      border: 2px solid var(--border-color);
+      border-radius: 14px;
+      background: #ffffff;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .share-card:hover {
+      border-color: #facc15;
+      box-shadow: 0 8px 24px rgba(238, 21, 21, 0.08);
+    }
+    .share-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 12px;
+    }
+    /* 座號與標題同一區域 */
+    .title-area {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      flex: 1;
+    }
+    .seat-badge {
+      background: linear-gradient(135deg, #ffcb05 0%, #f59e0b 100%);
+      color: #1e293b;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      box-shadow: 0 2px 4px rgba(245, 158, 11, 0.25);
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .card-title {
+      margin: 0;
+      color: #1e293b;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+    .meta-area {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      font-size: 12px;
+      color: #64748b;
+      white-space: nowrap;
+    }
+    .meta-tag {
+      background: #eff6ff;
+      color: #2563eb;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 14px;
+      margin-top: 14px;
+    }
+    .field {
+      background: #f8fafc;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #f1f5f9;
+      min-width: 0;
+    }
+    .field strong {
+      display: block;
+      color: #64748b;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .field p {
+      margin: 0;
+      color: #1e293b;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .rating {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed #e2e8f0;
+      color: #f59e0b;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .rating span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .empty-message { margin: 28px 8px; color: #8b948c; text-align: center; }
+    footer { margin-top: 16px; color: #8b948c; font-size: 12px; text-align: center; }
+    @media (max-width: 540px) {
+      body { padding: 14px 10px 28px; }
+      header, .wall-panel { padding: 14px; border-radius: 14px; }
+      .share-card-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .wall-list { height: 70vh; }
+      .fields { grid-template-columns: 1fr; }
+    }
+    /* 頂部導覽標籤列 */
+    .nav-bar {
+      display: flex; gap: 8px; margin-bottom: 16px;
+      overflow-x: auto; padding-bottom: 4px;
+    }
+    .nav-btn {
+      flex: 1; text-align: center; padding: 10px 14px;
+      border-radius: 12px; font-weight: 700; font-size: 14px;
+      text-decoration: none; border: 2px solid transparent;
+      background: #ffffff; color: #64748b;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .nav-btn:hover { color: var(--poke-red); border-color: #fecaca; }
+    .nav-btn.active {
+      background: linear-gradient(135deg, #ee1515, #c51111);
+      color: #ffffff; box-shadow: 0 3px 10px rgba(238, 21, 21, 0.25);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <!-- 頂部導覽列 -->
+    <nav class="nav-bar">
+      <a id="nav-home" href="<?= scriptUrl || './' ?>" target="_top" class="nav-btn">✏️ 個人讀報記錄</a>
+      <a id="nav-group" href="<?= scriptUrl ? scriptUrl + '?page=group' : './?page=group' ?>" target="_top" class="nav-btn">👥 小組討論選篇</a>
+      <a id="nav-parent" href="<?= scriptUrl ? scriptUrl + '?page=parent' : './?page=parent' ?>" target="_top" class="nav-btn active">🏆 家長成果牆</a>
+    </nav>
+
+    <header>
+      <h1>🔴 每日報報｜寶可夢讀報成果分享</h1>
+      <p class="intro">歡迎來到寶可夢讀報成果牆！一起看看小小訓練家們的閱讀心得冒險紀錄。</p>
+      <p class="privacy">本頁為只讀頁面，不提供修改；不顯示學生姓名與班級代號，守護訓練家隱私。</p>
+    </header>
+
+    <section class="wall-panel" aria-labelledby="wallTitle">
+      <div class="wall-heading">
+        <h2 id="wallTitle">🏆 全班讀報探險成果</h2>
+        <button type="button" id="refresh" class="refresh">🔄 重新整理</button>
+      </div>
+      <p id="status" class="status" role="status">讀取中…</p>
+      <div id="wall" class="wall-list" aria-live="polite"></div>
+    </section>
+
+    <footer>家長版僅供閱讀，資料由老師的讀報記錄表提供。</footer>
+  </main>
+
+  <script>
+    var $ = function (id) { return document.getElementById(id); };
+
+    function text(value) {
+      return String(value == null ? '' : value).trim();
+    }
+
+    function setStatus(message, isError) {
+      var status = $('status');
+      status.textContent = message;
+      status.className = isError ? 'status error' : 'status';
+    }
+
+    function addField(container, label, value) {
+      var content = text(value);
+      if (!content) return;
+
+      var field = document.createElement('div');
+      field.className = 'field';
+
+      var name = document.createElement('strong');
+      name.textContent = label;
+      field.appendChild(name);
+
+      var paragraph = document.createElement('p');
+      paragraph.textContent = content;
+      field.appendChild(paragraph);
+      container.appendChild(field);
+    }
+
+    function makeCard(item) {
+      var card = document.createElement('article');
+      card.className = 'share-card';
+
+      var head = document.createElement('div');
+      head.className = 'share-card-head';
+
+      // ⚡ 座號與標題顯示在同一區域
+      var titleArea = document.createElement('div');
+      titleArea.className = 'title-area';
+
+      if (text(item.seat)) {
+        var seatBadge = document.createElement('span');
+        seatBadge.className = 'seat-badge';
+        seatBadge.textContent = '⚡ ' + text(item.seat) + ' 號';
+        titleArea.appendChild(seatBadge);
+      }
+
+      var title = document.createElement('h3');
+      title.className = 'card-title';
+      title.textContent = text(item.title) || '未命名文章';
+      titleArea.appendChild(title);
+
+      head.appendChild(titleArea);
+
+      // 右側詮釋資訊：日期與版面
+      var metaArea = document.createElement('div');
+      metaArea.className = 'meta-area';
+
+      if (text(item.date)) {
+        var dateSpan = document.createElement('span');
+        dateSpan.textContent = '📅 ' + text(item.date);
+        metaArea.appendChild(dateSpan);
+      }
+
+      if (text(item.section)) {
+        var secSpan = document.createElement('span');
+        secSpan.className = 'meta-tag';
+        secSpan.textContent = text(item.section);
+        metaArea.appendChild(secSpan);
+      }
+
+      head.appendChild(metaArea);
+      card.appendChild(head);
+
+      // 內容欄位（附主題圖示）
+      var fields = document.createElement('div');
+      fields.className = 'fields';
+      addField(fields, '🏷️ 關鍵詞', item.keywords);
+      addField(fields, '📖 內容說明', item.content);
+      addField(fields, '💡 重點摘要', item.summary);
+      addField(fields, '💭 心得感想', item.reflection);
+      addField(fields, '🎓 我學到的是', item.learned);
+      addField(fields, '❓ 探險疑問', item.question);
+      addField(fields, '🔍 想進一步了解', item.wantToKnow);
+      card.appendChild(fields);
+
+      // 評價星等
+      var rating = Math.max(0, Math.min(5, Math.floor(Number(item.rating) || 0)));
+      var ratingBox = document.createElement('div');
+      ratingBox.className = 'rating';
+      ratingBox.textContent = rating ? '⭐'.repeat(rating) : '尚未評分';
+      var ratingText = document.createElement('span');
+      ratingText.textContent = rating ? rating + ' / 5 星' : '';
+      ratingBox.appendChild(ratingText);
+      card.appendChild(ratingBox);
+
+      return card;
+    }
+
+    function render(items) {
+      var wall = $('wall');
+      wall.textContent = '';
+      wall.className = 'wall-list';
+
+      if (!Array.isArray(items) || items.length === 0) {
+        wall.classList.add('empty');
+        var empty = document.createElement('p');
+        empty.className = 'empty-message';
+        empty.textContent = '目前還沒有可分享的成果。';
+        wall.appendChild(empty);
+        setStatus('尚無成果紀錄');
+        return;
+      }
+
+      items.forEach(function (item) {
+        wall.appendChild(makeCard(item));
+      });
+      setStatus('共 ' + items.length + ' 篇，最新成果在前');
+    }
+
+    function load() {
+      var button = $('refresh');
+      button.disabled = true;
+      setStatus('讀取中…');
+
+      google.script.run
+        .withSuccessHandler(function (items) {
+          button.disabled = false;
+          render(items);
+        })
+        .withFailureHandler(function (error) {
+          button.disabled = false;
+          setStatus('成果載入失敗：' + (error.message || '未知原因'), true);
+        })
+        .getReadings();
+    }
+
+    $('refresh').addEventListener('click', load);
+    load();
+
+    // 在 GAS 環境下，確保頂部按鈕皆指向完整 Web App 網址以正常跳轉
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run.withSuccessHandler(function(url) {
+        if (url) {
+          var home = $('nav-home');
+          var group = $('nav-group');
+          var parent = $('nav-parent');
+          if (home) home.href = url;
+          if (group) group.href = url + '?page=group';
+          if (parent) parent.href = url + '?page=parent';
+        }
+      }).getScriptUrl();
+    }
+  </script>
+</body>
+</html>

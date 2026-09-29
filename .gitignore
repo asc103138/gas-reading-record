@@ -1,0 +1,25 @@
+# OS generated files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Environment and sensitive keys
+.env
+*.env.*
+*.secret
+*.pem
+*.key
+credentials.json
+client_secret*.json
+
+# Clasp / Local tooling
+.clasp.json
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files & logs
+tmp/
+temp/
+*.log

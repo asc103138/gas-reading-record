@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>每日報報 ─ 寶可夢小組討論選篇牆</title>
+  <style>
+    :root {
+      --poke-red: #ee1515;
+      --poke-dark-red: #c51111;
+      --poke-yellow: #ffcb05;
+      --poke-gold: #f59e0b;
+      --poke-blue: #2563eb;
+      --poke-dark: #1e293b;
+      --poke-bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, "Noto Sans TC", sans-serif;
+      max-width: 760px; margin: 0 auto; padding: 20px 16px 40px;
+      line-height: 1.6; background: linear-gradient(180deg, #fff5f5 0%, #f0f7ff 100%);
+      color: var(--poke-dark);
+      min-height: 100vh;
+    }
+
+    /* 頂部導覽標籤列 */
+    .nav-bar {
+      display: flex; gap: 8px; margin-bottom: 16px;
+      overflow-x: auto; padding-bottom: 4px;
+    }
+    .nav-btn {
+      flex: 1; text-align: center; padding: 10px 14px;
+      border-radius: 12px; font-weight: 700; font-size: 14px;
+      text-decoration: none; border: 2px solid transparent;
+      background: #ffffff; color: #64748b;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .nav-btn:hover { color: var(--poke-red); border-color: #fecaca; }
+    .nav-btn.active {
+      background: linear-gradient(135deg, #ee1515, #c51111);
+      color: #ffffff; box-shadow: 0 3px 10px rgba(238, 21, 21, 0.25);
+    }
+
+    /* 頂部標題卡片 */
+    .header-card {
+      background: #fff; border: 2px solid #fed7aa;
+      border-radius: 18px; padding: 22px 18px 18px;
+      text-align: center; box-shadow: 0 4px 16px rgba(238, 21, 21, 0.06);
+      position: relative; overflow: hidden; margin-bottom: 20px;
+    }
+    .header-card::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 6px;
+      background: linear-gradient(90deg, #ee1515 0%, #ee1515 48%, #ffffff 48%, #ffffff 52%, #1e293b 52%, #1e293b 100%);
+    }
+    h1 {
+      font-size: 23px; margin: 4px 0 2px; color: var(--poke-dark-red);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .sub { color: #64748b; font-size: 14px; margin: 6px 0 0; }
+
+    /* 表單區塊 */
+    fieldset {
+      border: 2px solid var(--border-color); border-radius: 14px;
+      padding: 14px 16px 16px; margin: 16px 0; background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    legend {
+      font-weight: 800; padding: 4px 14px; border-radius: 20px;
+      color: #fff; font-size: 13.5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .c1 { background: linear-gradient(135deg, #ef4444, #dc2626); } /* 隊伍資料 */
+    .c2 { background: linear-gradient(135deg, #3b82f6, #2563eb); } /* 第一篇 */
+    .c3 { background: linear-gradient(135deg, #10b981, #059669); } /* 第二篇 */
+    .c4 { background: linear-gradient(135deg, #8b5cf6, #7c3aed); } /* 討論理由 */
+
+    label.txt { display: block; font-size: 13px; font-weight: 600; color: #64748b; margin-top: 10px; }
+    input[type=text], input[type=date], select, textarea {
+      width: 100%; font-size: 15px; padding: 10px;
+      margin-top: 5px; box-sizing: border-box;
+      border: 1.5px solid #cbd5e1; border-radius: 9px;
+      background: #f8fafc; color: var(--poke-dark);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--poke-red);
+      background: #ffffff;
+    }
+    textarea { resize: vertical; }
+    .row { display: flex; gap: 10px; }
+    .row > div { flex: 1; }
+
+    button#send {
+      width: 100%; font-size: 18px; font-weight: 800; padding: 13px; margin: 12px 0 10px;
+      background: linear-gradient(135deg, #ee1515, #c51111);
+      color: #fff; border: 0; border-radius: 12px; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(238, 21, 21, 0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    button#send:hover {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(238, 21, 21, 0.4);
+    }
+    button#send:disabled { opacity: .5; cursor: wait; transform: none; }
+    #status { min-height: 1.6em; text-align: center; color: #16a34a; font-weight: 700; font-size: 14.5px; }
+    #status.error { color: #dc2626; }
+
+    @media (max-width: 580px) {
+      .row { flex-direction: column; gap: 0; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 頂部導覽列 -->
+  <nav class="nav-bar">
+    <a id="nav-home" href="<?= scriptUrl || './' ?>" target="_top" class="nav-btn">✏️ 個人讀報記錄</a>
+    <a id="nav-group" href="<?= scriptUrl ? scriptUrl + '?page=group' : './?page=group' ?>" target="_top" class="nav-btn active">👥 小組討論選篇</a>
+  </nav>
+
+  <div class="header-card">
+    <h1>🔴 寶可夢探險小隊 ─ 小組選篇討論室</h1>
+    <p class="sub">小隊成員先共同討論，決定今天要在報紙上收服哪兩篇文章！</p>
+  </div>
+
+  <!-- 小組選篇登記表單 -->
+  <fieldset>
+    <legend class="c1">🔴 小隊基本資料</legend>
+    <div class="row">
+      <div>
+        <label class="txt" for="date">📅 讀報日期</label>
+        <input type="date" id="date">
+      </div>
+      <div>
+        <label class="txt" for="group">⚡ 選擇組別（必填）</label>
+        <select id="group">
+          <option value="">-- 請選擇組別 --</option>
+          <option value="第 1 組">⚡ 第 1 組</option>
+          <option value="第 2 組">🔥 第 2 組</option>
+          <option value="第 3 組">💧 第 3 組</option>
+          <option value="第 4 組">🌿 第 4 組</option>
+          <option value="第 5 組">🔮 第 5 組</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="txt" for="classCode">🏫 班級代號（必填）</label>
+        <input type="text" id="classCode" placeholder="例：四年丙班" maxlength="40">
+      </div>
+      <div>
+        <label class="txt" for="members">👥 小隊組員座號</label>
+        <input type="text" id="members" placeholder="例：3, 7, 12, 19" maxlength="100">
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend class="c2">📖 ① 第一篇文章</legend>
+    <label class="txt" for="section1">🏷️ 版面名稱（必填）</label>
+    <input type="text" id="section1" placeholder="例如：四年級文章、國際漫遊" maxlength="60">
+    <label class="txt" for="title1">文章標題（必填）</label>
+    <input type="text" id="title1" placeholder="請填寫第一篇文章標題" maxlength="200">
+  </fieldset>
+
+  <fieldset>
+    <legend class="c3">📖 ② 第二篇文章（選填，若今天只討論一篇可留空）</legend>
+    <label class="txt" for="section2">🏷️ 版面名稱（選填）</label>
+    <input type="text" id="section2" placeholder="例如：自然科學、兒童園地" maxlength="60">
+    <label class="txt" for="title2">文章標題（選填）</label>
+    <input type="text" id="title2" placeholder="若無第二篇可留空" maxlength="200">
+  </fieldset>
+
+  <fieldset>
+    <legend class="c4">💭 ③ 小組討論理由</legend>
+    <label class="txt" for="reason">為什麼決定選這兩篇？</label>
+    <textarea id="reason" rows="3" maxlength="500" placeholder="說說你們這組為什麼想讀這兩篇？或者這兩篇有什麼吸引大家的地方？"></textarea>
+  </fieldset>
+
+  <button id="send">🚀 送出小隊選篇決定</button>
+  <p id="status"></p>
+
+  <!-- 登記成功後：一鍵直通個人讀報傳送門 -->
+  <div id="directPersonalBox" style="display:none; margin-top:16px; padding:16px; background:#f0fdf4; border:2px solid #bbf7d0; border-radius:14px; text-align:center;">
+    <h3 style="margin:0 0 6px; color:#166534; font-size:16px;">🎉 小組選篇已登記完成！</h3>
+    <p style="margin:0 0 12px; color:#15803d; font-size:13.5px;">組員現在可以直接開始個人讀報，點擊下方按鈕將<strong>自動帶入文章標題與版面</strong>：</p>
+    <div id="directButtons" style="display:flex; flex-direction:column; gap:8px;"></div>
+  </div>
+
+  <script>
+    var $ = function (id) { return document.getElementById(id); };
+
+    function text(val) { return String(val == null ? '' : val).trim(); }
+
+    function showStatus(msg, isError) {
+      var el = $('status');
+      el.textContent = msg;
+      el.className = isError ? 'error' : '';
+    }
+
+    var currentWebUrl = '';
+
+    // 初始化日期
+    (function initDate() {
+      var d = $('date');
+      if (d && !d.value) {
+        var now = new Date();
+        var yyyy = now.getFullYear();
+        var mm = String(now.getMonth() + 1).padStart(2, '0');
+        var dd = String(now.getDate()).padStart(2, '0');
+        d.value = yyyy + '-' + mm + '-' + dd;
+      }
+    })();
+
+    // 本地快取：方便平板記住班級與組別
+    (function restoreStorage() {
+      try {
+        if (!window.localStorage) return;
+        var c = localStorage.getItem('poke_classCode');
+        var g = localStorage.getItem('poke_group');
+        if (c && !$('classCode').value) $('classCode').value = c;
+        if (g && !$('group').value) $('group').value = g;
+      } catch (e) {}
+    })();
+
+    function saveGroupStorage() {
+      try {
+        if (window.localStorage) {
+          localStorage.setItem('poke_classCode', $('classCode').value.trim());
+          localStorage.setItem('poke_group', $('group').value);
+        }
+      } catch (e) {}
+    }
+
+    $('classCode').addEventListener('change', saveGroupStorage);
+    $('group').addEventListener('change', saveGroupStorage);
+
+    function showDirectPersonalButtons(cCode, s1, t1, s2, t2, grp) {
+      var box = $('directPersonalBox');
+      var btnContainer = $('directButtons');
+      btnContainer.innerHTML = '';
+
+      var base = currentWebUrl || '<?= scriptUrl || "./" ?>';
+
+      function makeGoBtn(sec, tit, numStr) {
+        var a = document.createElement('a');
+        a.target = '_top';
+        var cleanBase = base.split('?')[0];
+        var url = cleanBase + '?classCode=' + encodeURIComponent(cCode)
+                + (grp ? '&group=' + encodeURIComponent(grp) : '')
+                + '&section=' + encodeURIComponent(sec)
+                + '&title=' + encodeURIComponent(tit);
+        a.href = url;
+        a.style.cssText = 'display:block; padding:12px 14px; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:800; text-decoration:none; border-radius:10px; font-size:15px; box-shadow:0 3px 8px rgba(16,185,129,0.25); transition:transform 0.15s;';
+        a.textContent = '🚀 帶入【' + numStr + '：' + (sec ? '[' + sec + '] ' : '') + tit + '】開始個人讀報 ➔';
+        return a;
+      }
+
+      if (t1) {
+        btnContainer.appendChild(makeGoBtn(s1, t1, '第一篇'));
+      }
+      if (t2) {
+        btnContainer.appendChild(makeGoBtn(s2, t2, '第二篇'));
+      }
+
+      box.style.display = 'block';
+      box.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function send() {
+      var group = $('group').value;
+      if (!group) { showStatus('請選擇小組組別', true); return; }
+
+      var classCode = $('classCode').value.trim();
+      if (!classCode) { showStatus('請填寫班級代號', true); return; }
+
+      var section1 = $('section1').value.trim();
+      if (!section1) { showStatus('請填寫第一篇文章的版面名稱', true); return; }
+
+      var title1 = $('title1').value.trim();
+      if (!title1) { showStatus('請填寫第一篇文章標題', true); return; }
+
+      var section2 = $('section2').value.trim();
+      var title2 = $('title2').value.trim();
+
+      saveGroupStorage();
+
+      $('send').disabled = true;
+      showStatus('送出中…', false);
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          $('send').disabled = false;
+          if (res && res.ok) {
+            showStatus('✅ ' + group + ' 選篇登記成功！紀錄已存入試算表。', false);
+            showDirectPersonalButtons(classCode, section1, title1, section2, title2, group);
+
+            $('members').value = '';
+            $('section1').value = '';
+            $('title1').value = '';
+            $('section2').value = '';
+            $('title2').value = '';
+            $('reason').value = '';
+          } else {
+            showStatus('送出失敗：' + ((res && res.error) || '未知原因'), true);
+          }
+        })
+        .withFailureHandler(function (err) {
+          $('send').disabled = false;
+          showStatus('送出失敗：' + err.message, true);
+        })
+        .submitGroupDiscussion({
+          date: $('date').value,
+          classCode: classCode,
+          group: group,
+          members: $('members').value,
+          section1: section1,
+          title1: title1,
+          section2: section2,
+          title2: title2,
+          reason: $('reason').value
+        });
+    }
+
+    $('send').addEventListener('click', send);
+
+    // 在 GAS 環境下，確保頂部按鈕皆指向完整 Web App 網址以正常跳轉
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run.withSuccessHandler(function(url) {
+        if (url) {
+          currentWebUrl = url;
+          var home = $('nav-home');
+          var group = $('nav-group');
+          if (home) home.href = url;
+          if (group) group.href = url + '?page=group';
+        }
+      }).getScriptUrl();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>每日報報 ─ 寶可夢讀報探險記錄表</title>
+  <style>
+    :root {
+      --poke-red: #ee1515;
+      --poke-dark-red: #c51111;
+      --poke-yellow: #ffcb05;
+      --poke-gold: #f59e0b;
+      --poke-blue: #2563eb;
+      --poke-dark: #1e293b;
+      --poke-bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+    }
+    body {
+      font-family: system-ui, "Noto Sans TC", sans-serif;
+      max-width: 680px; margin: 0 auto; padding: 20px 16px 36px;
+      line-height: 1.6; background: linear-gradient(180deg, #fff5f5 0%, #f0f7ff 100%);
+      color: var(--poke-dark);
+      min-height: 100vh;
+    }
+    .header-card {
+      background: #fff;
+      border: 2px solid #fed7aa;
+      border-radius: 18px;
+      padding: 20px 16px 16px;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(238, 21, 21, 0.06);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .header-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #ee1515 0%, #ee1515 48%, #ffffff 48%, #ffffff 52%, #1e293b 52%, #1e293b 100%);
+    }
+    h1 {
+      font-size: 23px; margin: 6px 0 2px; color: var(--poke-dark-red);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .sub { color: #64748b; font-size: 13.5px; margin: 6px 0 0; }
+    fieldset {
+      border: 2px solid var(--border-color); border-radius: 14px;
+      padding: 12px 16px 16px; margin: 16px 0; background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    legend {
+      font-weight: 800; padding: 4px 14px; border-radius: 20px;
+      color: #fff; font-size: 13.5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .c1 { background: linear-gradient(135deg, #ef4444, #dc2626); } /* 火 / 寶貝球 */
+    .c2 { background: linear-gradient(135deg, #3b82f6, #2563eb); } /* 水 / 標題 */
+    .c3 { background: linear-gradient(135deg, #10b981, #059669); } /* 草 / 內容 */
+    .c4 { background: linear-gradient(135deg, #f59e0b, #d97706); } /* 電 / 摘要 */
+    .c5 { background: linear-gradient(135deg, #8b5cf6, #7c3aed); } /* 超能力 / 心得 */
+    .c6 { background: linear-gradient(135deg, #06b6d4, #0891b2); } /* 冰 / 疑問 */
+    .c7 { background: linear-gradient(135deg, #f59e0b, #b45309); } /* 星星 */
+    
+    label.txt { display: block; font-size: 13px; font-weight: 600; color: #64748b; margin-top: 10px; }
+    input[type=text], input[type=date], input[type=number], textarea {
+      width: 100%; font-size: 15px; padding: 10px;
+      margin-top: 5px; box-sizing: border-box;
+      border: 1.5px solid #cbd5e1; border-radius: 9px;
+      background: #f8fafc; color: var(--poke-dark);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    input:focus, textarea:focus {
+      outline: none; border-color: var(--poke-red);
+      background: #ffffff;
+    }
+    textarea { resize: vertical; }
+    .row { display: flex; gap: 10px; }
+    .row > div { flex: 1; }
+    #stars { display: flex; gap: 8px; margin-top: 6px; font-size: 32px; }
+    #stars label { cursor: pointer; }
+    #stars input { display: none; }
+    #stars label span { color: #cbd5e1; transition: color .15s, transform .15s; display: inline-block; }
+    #stars label:hover span { transform: scale(1.15); }
+    .on { color: #f59e0b !important; text-shadow: 0 1px 4px rgba(245, 158, 11, 0.4); }
+    button#send {
+      width: 100%; font-size: 18px; font-weight: 800; padding: 13px; margin: 10px 0 10px;
+      background: linear-gradient(135deg, #ee1515, #c51111);
+      color: #fff; border: 0; border-radius: 12px; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(238, 21, 21, 0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    button#send:hover {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(238, 21, 21, 0.4);
+    }
+    button#send:disabled { opacity: .5; cursor: wait; transform: none; }
+    #status { min-height: 1.6em; text-align: center; color: #16a34a; font-weight: 700; font-size: 14.5px; }
+
+    /* 頂部導覽標籤列 */
+    .nav-bar {
+      display: flex; gap: 8px; margin-bottom: 16px;
+      overflow-x: auto; padding-bottom: 4px;
+    }
+    .nav-btn {
+      flex: 1; text-align: center; padding: 10px 14px;
+      border-radius: 12px; font-weight: 700; font-size: 14px;
+      text-decoration: none; border: 2px solid transparent;
+      background: #ffffff; color: #64748b;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .nav-btn:hover { color: var(--poke-red); border-color: #fecaca; }
+    .nav-btn.active {
+      background: linear-gradient(135deg, #ee1515, #c51111);
+      color: #ffffff; box-shadow: 0 3px 10px rgba(238, 21, 21, 0.25);
+    }
+
+    /* 小組文章連動卡片（生生用平板・同組免手抄） */
+    .group-sync-card {
+      background: #f0fdf4;
+      border: 2px dashed #86efac;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin: 16px 0;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
+      transition: all 0.3s ease;
+    }
+    .group-sync-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .group-sync-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #166534;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .refresh-btn {
+      background: #e0f2fe;
+      border: 1.5px solid #7dd3fc;
+      color: #0284c7;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s;
+    }
+    .refresh-btn:hover {
+      background: #bae6fd;
+    }
+    .group-sync-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .group-article-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+      padding: 12px 14px;
+      background: #ffffff;
+      border: 2px solid #86efac;
+      border-radius: 12px;
+      color: #15803d;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.1);
+      transition: all 0.2s;
+    }
+    .group-article-btn:hover, .group-article-btn:active {
+      background: #dcfce7;
+      border-color: #22c55e;
+      transform: translateY(-1px);
+    }
+    .group-article-btn.active-choice {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      border-color: #059669;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .group-article-btn.active-choice .badge {
+      background: #ffffff !important;
+      color: #059669 !important;
+      font-weight: 800;
+    }
+    @keyframes highlightPulse {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+      70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .auto-filled {
+      animation: highlightPulse 1.2s ease-out;
+      border-color: #10b981 !important;
+      background-color: #f0fdf4 !important;
+    }
+    .note { font-size: 12px; color: #94a3b8; text-align: center; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <!-- 頂部導覽列 -->
+  <nav class="nav-bar">
+    <a id="nav-home" href="<?= scriptUrl || './' ?>" target="_top" class="nav-btn active">✏️ 個人讀報記錄</a>
+    <a id="nav-group" href="<?= scriptUrl ? scriptUrl + '?page=group' : './?page=group' ?>" target="_top" class="nav-btn">👥 小組討論選篇</a>
+  </nav>
+
+  <div class="header-card">
+    <h1>🔴 每日報報 ─ 寶可夢讀報探險記錄表</h1>
+    <p class="sub">讀完一篇文章，像收服寶可夢一樣記錄你的冒險心得吧！</p>
+  </div>
+
+  <fieldset>
+    <legend class="c1">🔴 訓練家基本資料</legend>
+    <div class="row">
+      <div>
+        <label class="txt" for="date">📅 讀報日期（星期）</label>
+        <input type="date" id="date">
+      </div>
+      <div>
+        <label class="txt" for="classCode">🏫 班級代號（必填）</label>
+        <input type="text" id="classCode" placeholder="例：四年丙班" maxlength="40">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label class="txt" for="group">👥 所屬組別（選定後自動同步討論文章）</label>
+        <select id="group">
+          <option value="">-- 請選擇組別（或個別閱讀） --</option>
+          <option value="第 1 組">⚡ 第 1 組</option>
+          <option value="第 2 組">🔥 第 2 組</option>
+          <option value="第 3 組">💧 第 3 組</option>
+          <option value="第 4 組">🌿 第 4 組</option>
+          <option value="第 5 組">🔮 第 5 組</option>
+          <option value="個人閱讀">⭐ 個人獨立閱讀（不分組）</option>
+        </select>
+      </div>
+      <div>
+        <label class="txt" for="seat">⚡ 座號</label>
+        <input type="number" id="seat" min="1" max="60" placeholder="例：7">
+      </div>
+    </div>
+  </fieldset>
+
+  <!-- 小組討論文章一鍵快速帶入卡片（平板同組專用・免手抄） -->
+  <div id="groupSyncCard" class="group-sync-card" style="display:none;">
+    <div class="group-sync-header">
+      <div id="groupSyncHeading" class="group-sync-title">👥 小組討論文章同步</div>
+      <button type="button" id="btnRefreshGroup" class="refresh-btn">🔄 重新整理</button>
+    </div>
+    <div id="groupSyncBody">
+      <!-- 動態載入小組討論文章 -->
+    </div>
+  </div>
+
+  <fieldset>
+    <legend class="c2">⚡ ① 文章標題與版面</legend>
+    <label class="txt" for="section">🏷️ 版面名稱（必填）</label>
+    <input type="text" id="section" placeholder="例如：四年級文章、自然科學（可從上方點選帶入）" maxlength="60">
+    <label class="txt" for="title">這篇文章的標題是？（必填）</label>
+    <textarea id="title" rows="2" maxlength="200" placeholder="請填寫文章標題（可從上方點選帶入）"></textarea>
+    <label class="txt" for="keywords">🏷️ 關鍵詞（重點詞彙）</label>
+    <textarea id="keywords" rows="2" maxlength="200" placeholder="例：食安、防疫、地理…"></textarea>
+  </fieldset>
+
+  <fieldset>
+    <legend class="c3">🌿 ② 文章內容在說什麼？</legend>
+    <textarea id="content" rows="4" maxlength="500" placeholder="用幾句話說說這篇文章主要在講什麼"></textarea>
+  </fieldset>
+
+  <fieldset>
+    <legend class="c4">💧 ③ 重點摘要</legend>
+    <textarea id="summary" rows="3" maxlength="500" placeholder="把最重要的重點抓出來寫在這裡"></textarea>
+  </fieldset>
+
+  <fieldset>
+    <legend class="c5">🔥 ④ 心得感想</legend>
+    <label class="txt" for="reflection">💭 你的想法是？</label>
+    <textarea id="reflection" rows="3" maxlength="500" placeholder="讀完之後你的感覺或想法"></textarea>
+    <label class="txt" for="learned">🎓 我學到的是…</label>
+    <textarea id="learned" rows="2" maxlength="500" placeholder="這篇文章讓你學到了什麼？"></textarea>
+  </fieldset>
+
+  <fieldset>
+    <legend class="c6">🔮 ⑤ 探險疑問</legend>
+    <label class="txt" for="question">❓ 有什麼疑問？</label>
+    <textarea id="question" rows="2" maxlength="500" placeholder="你還想更了解的內容"></textarea>
+    <label class="txt" for="wantToKnow">🔍 想進一步了解的方向</label>
+    <textarea id="wantToKnow" rows="2" maxlength="500" placeholder="例如想查某個專有名詞、想找更多資料…"></textarea>
+  </fieldset>
+
+  <fieldset>
+    <legend class="c7">⭐ 冒險評價</legend>
+    <div id="stars">
+      <label><input type="radio" name="rating" value="1"><span>★</span></label>
+      <label><input type="radio" name="rating" value="2"><span>★</span></label>
+      <label><input type="radio" name="rating" value="3"><span>★</span></label>
+      <label><input type="radio" name="rating" value="4"><span>★</span></label>
+      <label><input type="radio" name="rating" value="5"><span>★</span></label>
+    </div>
+  </fieldset>
+
+  <button id="send">🚀 送出讀報探險紀錄</button>
+  <p id="status"></p>
+  <p class="note">填完送出後，你的紀錄會存進老師的試算表。</p>
+
+  <script>
+    // ⚠️ 前端 JS 只能寫在這裡（index.html 的 script 區塊），不要另存成 .gs 檔
+    var $ = function (id) { return document.getElementById(id); };
+
+    function show(text, isError) {
+      var el = $('status');
+      el.textContent = text;
+      el.className = isError ? 'error' : '';
+    }
+    function lock(on) { $('send').disabled = on; }
+
+    // 預設填入今日日期（若尚未填寫）
+    (function initDate() {
+      var dateInput = $('date');
+      if (dateInput && !dateInput.value) {
+        var now = new Date();
+        var yyyy = now.getFullYear();
+        var mm = String(now.getMonth() + 1).padStart(2, '0');
+        var dd = String(now.getDate()).padStart(2, '0');
+        dateInput.value = yyyy + '-' + mm + '-' + dd;
+      }
+    })();
+
+    // ★ 星星評分
+    var starLabels = document.querySelectorAll('#stars label');
+    document.querySelectorAll('#stars input').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        var val = Number(radio.value);
+        starLabels.forEach(function (label, i) {
+          label.querySelector('span').className = (i < val) ? 'on' : '';
+        });
+      });
+    });
+
+    function getRating() {
+      var checked = document.querySelector('#stars input:checked');
+      return checked ? Number(checked.value) : 0;
+    }
+
+    function resetRating() {
+      var checked = document.querySelector('#stars input:checked');
+      if (checked) checked.checked = false;
+      starLabels.forEach(function (label) {
+        label.querySelector('span').className = '';
+      });
+    }
+
+    // 工具函式
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function escapeAttr(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // 本地快取（平板專用記憶：班級、組別、座號，省去學生重複輸入）
+    function saveStorage() {
+      try {
+        if (window.localStorage) {
+          localStorage.setItem('poke_classCode', $('classCode').value.trim());
+          localStorage.setItem('poke_group', $('group').value);
+          localStorage.setItem('poke_seat', $('seat').value.trim());
+        }
+      } catch (e) {}
+    }
+
+    function restoreStorage() {
+      try {
+        if (!window.localStorage) return;
+        var c = localStorage.getItem('poke_classCode');
+        var g = localStorage.getItem('poke_group');
+        var s = localStorage.getItem('poke_seat');
+        if (c && !$('classCode').value) $('classCode').value = c;
+        if (g && !$('group').value) $('group').value = g;
+        if (s && !$('seat').value) $('seat').value = s;
+      } catch (e) {}
+    }
+
+    // 將選中的文章帶入表單輸入框
+    function applyArticleToForm(sec, tit) {
+      var secInput = $('section');
+      var titleInput = $('title');
+      secInput.value = sec;
+      titleInput.value = tit;
+
+      secInput.classList.remove('auto-filled');
+      titleInput.classList.remove('auto-filled');
+      void secInput.offsetWidth; // 觸發重繪
+      secInput.classList.add('auto-filled');
+      titleInput.classList.add('auto-filled');
+
+      show('✅ 已成功帶入文章：' + (sec ? '【' + sec + '】' : '') + tit + '！訓練家請開始填寫心得！', false);
+    }
+
+    // 查詢並顯示小組討論文章（生生用平板・同組免手抄）
+    function fetchGroupArticles() {
+      var group = $('group').value;
+      var card = $('groupSyncCard');
+      var heading = $('groupSyncHeading');
+      var body = $('groupSyncBody');
+
+      if (!group || group === '個人閱讀') {
+        card.style.display = 'none';
+        return;
+      }
+
+      card.style.display = 'block';
+      heading.innerHTML = '👥 正在同步【' + escapeHtml(group) + '】討論文章…';
+      body.innerHTML = '<p style="color:#64748b; font-size:13.5px; margin:6px 0;">🔍 正在連線試算表，查詢今日小隊討論紀錄…</p>';
+
+      if (typeof google === 'undefined' || !google.script || !google.script.run) {
+        body.innerHTML = '<p style="color:#e11d48; font-size:13px; margin:4px 0;">（本地預覽環境，無法查詢 Google 試算表）</p>';
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.ok && res.found && res.articles && res.articles.length > 0) {
+            heading.innerHTML = '✨ 偵測到【' + escapeHtml(group) + '】今日討論文章（<strong>點擊一鍵帶入</strong>）：';
+            var html = '<div class="group-sync-btns">';
+            res.articles.forEach(function (art, idx) {
+              var numText = idx === 0 ? '第一篇' : '第二篇';
+              var secDisp = art.section ? ('【' + escapeHtml(art.section) + '】') : '';
+              var titleDisp = escapeHtml(art.title);
+              html += '<button type="button" class="group-article-btn" data-sec="' + escapeAttr(art.section) + '" data-title="' + escapeAttr(art.title) + '">'
+                    + '<span>📖 ' + numText + '：' + secDisp + ' ' + titleDisp + '</span>'
+                    + '<span class="badge" style="font-size:12px; background:#dcfce7; padding:4px 8px; border-radius:6px; color:#15803d; white-space:nowrap; margin-left:8px;">點我帶入 ➔</span>'
+                    + '</button>';
+            });
+            html += '</div>';
+            body.innerHTML = html;
+
+            var btns = body.querySelectorAll('.group-article-btn');
+            btns.forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                btns.forEach(function (b) { b.classList.remove('active-choice'); });
+                btn.classList.add('active-choice');
+
+                var sec = btn.getAttribute('data-sec') || '';
+                var tit = btn.getAttribute('data-title') || '';
+                applyArticleToForm(sec, tit);
+              });
+            });
+          } else {
+            heading.innerHTML = '⏳ 尚未查詢到【' + escapeHtml(group) + '】今日紀錄';
+            body.innerHTML = '<p style="color:#92400e; font-size:13.5px; margin:4px 0 6px;">同組同學在「👥 小組討論選篇」送出後，點右上方「🔄 重新整理」即可一鍵同步文章，免手抄！</p>';
+          }
+        })
+        .withFailureHandler(function (err) {
+          heading.innerHTML = '⚠️ 查詢失敗';
+          body.innerHTML = '<p style="color:#dc2626; font-size:13px; margin:4px 0;">' + escapeHtml(err.message) + '</p>';
+        })
+        .getTodayGroupArticles({
+          date: $('date').value,
+          classCode: $('classCode').value.trim(),
+          group: group
+        });
+    }
+
+    // 解析網址參數（若從小組討論頁面直接點擊按鈕跳轉過來）
+    (function parseUrlParams() {
+      try {
+        var search = window.location.search;
+        if (!search) return;
+        var params = new URLSearchParams(search);
+        var pClass = params.get('classCode');
+        var pGroup = params.get('group');
+        var pSection = params.get('section');
+        var pTitle = params.get('title');
+
+        if (pClass) $('classCode').value = pClass;
+        if (pGroup) $('group').value = pGroup;
+        if (pSection) $('section').value = pSection;
+        if (pTitle) $('title').value = pTitle;
+
+        if (pSection || pTitle) {
+          $('section').classList.add('auto-filled');
+          $('title').classList.add('auto-filled');
+          show('🎉 已自動帶入小組文章：' + (pSection ? '【' + pSection + '】' : '') + pTitle + '，請開始個人讀報！', false);
+        }
+      } catch (e) {}
+    })();
+
+    // 恢復快取與事件監聽
+    restoreStorage();
+    if ($('group').value && !$('title').value) {
+      fetchGroupArticles();
+    }
+
+    $('group').addEventListener('change', function () {
+      saveStorage();
+      fetchGroupArticles();
+    });
+    $('classCode').addEventListener('change', function () {
+      saveStorage();
+      if ($('group').value) fetchGroupArticles();
+    });
+    $('date').addEventListener('change', function () {
+      if ($('group').value) fetchGroupArticles();
+    });
+    $('seat').addEventListener('change', saveStorage);
+    $('btnRefreshGroup').addEventListener('click', fetchGroupArticles);
+
+    function clearArticleForm() {
+      // 保持 date, classCode, group, seat，只清空文章內容與評分
+      $('section').value = '';
+      $('title').value = '';
+      $('keywords').value = '';
+      $('content').value = '';
+      $('summary').value = '';
+      $('reflection').value = '';
+      $('learned').value = '';
+      $('question').value = '';
+      $('wantToKnow').value = '';
+      resetRating();
+      var activeBtn = document.querySelector('.group-article-btn.active-choice');
+      if (activeBtn) activeBtn.classList.remove('active-choice');
+    }
+
+    function send() {
+      var section = $('section').value.trim();
+      if (!section) { show('請填寫版面名稱', true); return; }
+
+      var classCode = $('classCode').value.trim();
+      if (!classCode) { show('請填寫班級代號', true); return; }
+
+      var title = $('title').value.trim();
+      if (!title) { show('文章標題不能空白', true); return; }
+
+      saveStorage();
+      lock(true);
+      show('送出中…', false);
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          lock(false);
+          if (res && res.ok) {
+            clearArticleForm();
+            show('✅ 已成功送出！這是第 ' + res.count + ' 筆紀錄。', false);
+          } else {
+            show('送出失敗：' + ((res && res.error) || '未知原因'), true);
+          }
+        })
+        .withFailureHandler(function (err) {
+          lock(false);
+          show('送出失敗：' + err.message, true);
+        })
+        .submitReading({
+          date: $('date').value,
+          section: section,
+          classCode: $('classCode').value,
+          seat: $('seat').value,
+          title: title,
+          keywords: $('keywords').value,
+          content: $('content').value,
+          summary: $('summary').value,
+          reflection: $('reflection').value,
+          learned: $('learned').value,
+          question: $('question').value,
+          wantToKnow: $('wantToKnow').value,
+          rating: getRating()
+        });
+    }
+
+    $('send').addEventListener('click', send);
+
+    // 在 GAS 環境下，確保頂部按鈕皆指向完整 Web App 網址以正常跳轉
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run.withSuccessHandler(function(url) {
+        if (url) {
+          var home = $('nav-home');
+          var group = $('nav-group');
+          if (home) home.href = url;
+          if (group) group.href = url + '?page=group';
+        }
+      }).getScriptUrl();
+    }
+  </script>
+</body>
+</html>
