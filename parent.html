@@ -343,6 +343,16 @@
         metaArea.appendChild(dateSpan);
       }
 
+      if (text(item.group)) {
+        var grpSpan = document.createElement('span');
+        grpSpan.className = 'meta-tag';
+        grpSpan.style.background = '#fef3c7';
+        grpSpan.style.borderColor = '#fde68a';
+        grpSpan.style.color = '#b45309';
+        grpSpan.textContent = '👥 ' + text(item.group);
+        metaArea.appendChild(grpSpan);
+      }
+
       if (text(item.section)) {
         var secSpan = document.createElement('span');
         secSpan.className = 'meta-tag';

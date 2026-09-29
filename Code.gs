@@ -14,9 +14,9 @@
 const SHEET_NAME = '回覆';   // 要跟試算表左下角的分頁名稱一模一樣
 const GROUP_SHEET_NAME = '小組討論'; // 小組選篇討論專用分頁
 
-// 標準 14 欄標題列（不含「報紙名稱」）
+// 標準 15 欄標題列（含組別分類）
 const HEADERS = [
-  '時間', '讀報日期', '版面名稱', '班級代號', '座號',
+  '時間', '讀報日期', '版面名稱', '班級代號', '組別', '座號',
   '文章標題', '關鍵詞', '內容說明', '重點摘要',
   '心得感想', '我學到的是', '疑問', '想進一步了解', '評價(1-5)'
 ];
@@ -92,11 +92,14 @@ function submitReading(data) {
       return { ok: false, error: '文章標題不能空白' };
     }
 
+    const group = String((data && data.group) || '').trim().slice(0, 30);
+
     const row = [
       new Date(),                                                    // 時間戳記（永遠第一欄）
       String((data && data.date) || '').trim().slice(0, 30),         // 讀報日期
       section,                                                       // 版面名稱（必填，例：四年級文章、自然科學）
       classCode,                                                     // 班級代號（必填）
+      group,                                                         // 組別（新增，例：第 1 組、第 2 組）
       String((data && data.seat) || '').trim().slice(0, 20),         // 座號
       title,                                                         // 文章標題
       String((data && data.keywords) || '').trim().slice(0, 200),    // 關鍵詞（重點詞彙）
@@ -125,22 +128,23 @@ function getReadings() {
     return [];
   }
 
-  // 讀取前 14 欄，不把班級代號（row[3]）送到前端以保護隱私
+  // 讀取前 15 欄，不把班級代號（row[3]）送到前端以保護隱私
   const rows = sheet.getRange(2, 1, lastRow - 1, HEADERS.length).getDisplayValues();
   return rows.reverse().map(function (row) {
     return {
       date: row[1],
       section: row[2],
-      seat: row[4],
-      title: row[5],
-      keywords: row[6],
-      content: row[7],
-      summary: row[8],
-      reflection: row[9],
-      learned: row[10],
-      question: row[11],
-      wantToKnow: row[12],
-      rating: row[13]
+      group: row[4],
+      seat: row[5],
+      title: row[6],
+      keywords: row[7],
+      content: row[8],
+      summary: row[9],
+      reflection: row[10],
+      learned: row[11],
+      question: row[12],
+      wantToKnow: row[13],
+      rating: row[14]
     };
   });
 }
@@ -328,18 +332,20 @@ function getGroupDiscussions() {
 }
 
 /**
- * 手動維護：一鍵修正試算表標題列
- * 1. 自動偵測「報紙名稱」（或包含「報紙」）的欄位並刪除該欄，讓後方錯位的資料（班級、座號、標題）自動左移歸位
- * 2. 將第一列重新設定為標準 14 欄標題列並凍結第一列
- * 3. 同步初始化「小組討論」分頁與標準 10 欄標題列
+ * 手動維護：一鍵修正試算表標題列與組別分頁
+ * 1. 自動偵測「報紙名稱」（或包含「報紙」）的欄位並刪除該欄，讓後方錯位資料自動左移歸位
+ * 2. 自動檢查「回覆」分頁是否已有「組別」欄位；若無則在第 4 欄（班級代號）後插入「組別」欄，舊資料自動向右對齊
+ * 3. 將第一列重新設定為標準 15 欄標題列並凍結第一列
+ * 4. 自動建立/更新「第 1 組」～「第 5 組」專屬分頁，設定即時連動 FILTER 公式與凍結列
+ * 5. 同步初始化「小組討論」分頁與標準 10 欄標題列
  */
 function 修正試算表() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = getSheet_();
-  const lastCol = sheet.getLastColumn();
+  let lastCol = sheet.getLastColumn();
   
   if (sheet.getLastRow() > 0 && lastCol > 0) {
-    const currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-    let removed = false;
+    let currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
     
     // 檢查是否有「報紙名稱」或包含「報紙」的欄位，由右向左檢查刪除，避免索引偏移
     for (let c = currentHeaders.length - 1; c >= 0; c--) {
@@ -347,20 +353,44 @@ function 修正試算表() {
       if (headerText === '報紙名稱' || headerText.indexOf('報紙') !== -1) {
         sheet.deleteColumn(c + 1);
         Logger.log('✅ 已偵測並刪除第 ' + (c + 1) + ' 欄（' + headerText + '），資料已自動向左歸位！');
-        removed = true;
       }
     }
 
-    if (!removed && lastCol === 15) {
-      Logger.log('ℹ️ 目前試算表共有 15 欄，若第 3 欄為舊報紙欄位，可手動刪除第 C 欄。');
+    lastCol = sheet.getLastColumn();
+    currentHeaders = sheet.getRange(1, 1, 1, Math.max(1, lastCol)).getValues()[0];
+
+    // 檢查「回覆」分頁是否已有「組別」欄位
+    const hasGroup = currentHeaders.some(function(h) { return String(h || '').trim() === '組別'; });
+    if (!hasGroup && lastCol >= 4) {
+      // 在第 4 欄（班級代號）後方插入「組別」欄
+      sheet.insertColumnAfter(4);
+      Logger.log('✅ 已在第 4 欄（班級代號）後方插入「組別」欄，舊有資料自動向右對齊歸位！');
     }
   }
 
-  // 將第一列更新為標準 14 欄標題
+  // 將第一列更新為標準 15 欄標題
   sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
   sheet.setFrozenRows(1);
-  Logger.log('✅ 個人讀報表標題列已重設為標準 14 欄：' + HEADERS.join('、'));
+  Logger.log('✅ 個人讀報表（回覆）標題列已重設為標準 15 欄：' + HEADERS.join('、'));
   Logger.log('目前共有 ' + Math.max(0, sheet.getLastRow() - 1) + ' 筆個人讀報紀錄。');
+
+  // 自動建立/更新「第 1 組」～「第 5 組」專屬連動分頁
+  const groupTabs = ['第 1 組', '第 2 組', '第 3 組', '第 4 組', '第 5 組'];
+  groupTabs.forEach(function(grp) {
+    let tab = ss.getSheetByName(grp);
+    if (!tab) {
+      tab = ss.insertSheet(grp);
+    }
+    // 設定第 1 列標題列
+    tab.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+    tab.setFrozenRows(1);
+
+    // 設定 A2 即時動態連動公式：自動從「回覆」分頁鏡射該組別的所有資料列
+    // 回覆分頁的 E 欄為「組別」，A2:O 為完整的 15 欄資料
+    const formula = '=IFERROR(FILTER(\'回覆\'!A2:O, \'回覆\'!E2:E = "' + grp + '"), "尚無 ' + grp + ' 回覆紀錄")';
+    tab.getRange('A2').setFormula(formula);
+    Logger.log('✅ 已建立/更新【' + grp + '】專屬分頁，公式連動就緒！');
+  });
 
   // 同步初始化小組討論分頁
   const groupSheet = getGroupSheet_();
