@@ -16,8 +16,17 @@
       --poke-bg: #f8fafc;
       --card-bg: #ffffff;
       --border-color: #e2e8f0;
+
+      /* Emil Kowalski 質感動效核心曲率與時間 */
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     * { box-sizing: border-box; }
+    html {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-text-size-adjust: 100%;
+    }
     body {
       margin: 0;
       padding: 24px 16px 36px;
@@ -95,11 +104,21 @@
       color: var(--poke-red);
       font-weight: 700;
       cursor: pointer;
-      transition: all 0.2s;
+      touch-action: manipulation;
+      user-select: none; -webkit-user-select: none;
+      transition: transform 140ms var(--ease-out), background 160ms var(--ease-out), color 160ms var(--ease-out), border-color 160ms var(--ease-out);
     }
-    .refresh:hover { background: var(--poke-red); color: #fff; }
-    .refresh:disabled { opacity: .5; cursor: wait; }
-    .status { min-height: 1.4em; margin: 0 0 10px; color: #64748b; font-size: 13px; }
+    .refresh:active {
+      transform: scale(0.95);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .refresh:hover { background: var(--poke-red); color: #fff; }
+    }
+    .refresh:disabled { opacity: .5; cursor: wait; transform: none; }
+    .status {
+      min-height: 1.4em; margin: 0 0 10px; color: #64748b; font-size: 13px;
+      transition: opacity 160ms var(--ease-out);
+    }
     .status.error { color: #dc2626; font-weight: 600; }
     .wall-list {
       display: grid;
@@ -114,17 +133,32 @@
     }
     .wall-list.empty { height: auto; min-height: 0; }
     
-    /* 寶可夢卡片風格 */
+    /* 寶可夢卡片風格與階梯式進場 (Stagger reveal) */
+    @keyframes cardStaggerEnter {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
     .share-card {
       padding: 16px;
       border: 2px solid var(--border-color);
       border-radius: 14px;
       background: #ffffff;
-      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      animation: cardStaggerEnter 240ms var(--ease-out) backwards;
+      animation-delay: calc(var(--card-index, 0) * 35ms);
+      transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out), border-color 160ms var(--ease-out);
     }
-    .share-card:hover {
-      border-color: #facc15;
-      box-shadow: 0 8px 24px rgba(238, 21, 21, 0.08);
+    @media (hover: hover) and (pointer: fine) {
+      .share-card:hover {
+        border-color: #facc15;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(238, 21, 21, 0.08);
+      }
     }
     .share-card-head {
       display: flex;
@@ -242,12 +276,28 @@
       text-decoration: none; border: 2px solid transparent;
       background: #ffffff; color: #64748b;
       box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-      transition: all 0.2s; white-space: nowrap;
+      transition: transform 140ms var(--ease-out), color 160ms var(--ease-out), border-color 160ms var(--ease-out), background 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+      white-space: nowrap;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
     }
-    .nav-btn:hover { color: var(--poke-red); border-color: #fecaca; }
+    .nav-btn:active {
+      transform: scale(0.96);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .nav-btn:hover { color: var(--poke-red); border-color: #fecaca; }
+    }
     .nav-btn.active {
       background: linear-gradient(135deg, #ee1515, #c51111);
       color: #ffffff; box-shadow: 0 3px 10px rgba(238, 21, 21, 0.25);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
   </style>
 </head>
@@ -403,8 +453,10 @@
         return;
       }
 
-      items.forEach(function (item) {
-        wall.appendChild(makeCard(item));
+      items.forEach(function (item, idx) {
+        var card = makeCard(item);
+        card.style.setProperty('--card-index', Math.min(idx, 10));
+        wall.appendChild(card);
       });
       setStatus('共 ' + items.length + ' 篇，最新成果在前');
     }
