@@ -2,7 +2,7 @@
 
 ## 📌 最新交接時間
 - **日期**：2026-10-15
-- **目前版本**：v1.5.0
+- **目前版本**：v1.5.0 (Commit: `e51a688`)
 - **GitHub 儲存庫**：[https://github.com/asc103138/gas-reading-record](https://github.com/asc103138/gas-reading-record)
 
 ---
