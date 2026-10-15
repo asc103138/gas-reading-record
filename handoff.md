@@ -1,8 +1,8 @@
 # 每日報報專案進度交接筆記 (handoff.md)
 
 ## 📌 最新交接時間
-- **日期**：2026-10-02
-- **目前版本**：v1.4.0 (Commit: `0f0972d`)
+- **日期**：2026-10-15
+- **目前版本**：v1.5.0
 - **GitHub 儲存庫**：[https://github.com/asc103138/gas-reading-record](https://github.com/asc103138/gas-reading-record)
 
 ---
@@ -26,15 +26,28 @@
    - **校園網路 100% 免阻擋**：全數使用純 SVG 向量，無任何外部圖檔外連，完全不怕學校 TANet 兒少網路防火牆或 Google Apps Script iframe 阻擋。
    - **GPU 合成層極致效能**：僅操作 `transform` 與 `opacity`，在學生平價平板與 Chromebook 上順暢 60fps 運作。
 
+3. **提交後內容完整保留與單格精準修正機制（免重複重寫痛點根治）**：
+   - **送出不再清空表單**：學生送出讀報紀錄後，所有文字框、標題、摘要、心得與星等**全數保留在畫面上**，老師指導修改某個特定格子時，學生只需直接點擊該格修改，不再需要從頭手抄重打。
+   - **試算表原列更新（In-place Update）**：
+     - `Code.gs` 的 `submitReading` 與 `submitGroupDiscussion` 升級為支援 `rowIndex` 原列覆蓋更新。
+     - 具備安全校驗與雙重防護（比對該列之班級、座號／組別與日期標題），確認為同一筆紀錄後直接原位更新並刷新時間戳記，**絕不在試算表產生重複冗餘資料列**。
+   - **智慧動態按鈕狀態提示**：
+     - 送出後轉為綠色 `💾 內容已送出（若需修改，直接改格子再點此更新）`。
+     - 一旦學生修改上方任何一格文字，按鈕立即轉為金橘色微動態 `✨ 偵測到修改，點此更新送出！`。
+   - **增設「清空填寫新篇章」按鈕**：
+     - 送出區下方提供 `📝 清空填寫新篇章` 按鈕（附防呆確認彈窗），學生需要記錄下一篇新文章時可一鍵乾淨重置。
+   - **全域 LocalStorage 雙向草稿備份**：
+     - 所有輸入框即時雙向快取，即使平板意外跳轉、休眠或重新整理，原內容即刻 100% 無損還原。
+
 ---
 
 ## 🔮 下一步建議方向
 
 1. **部署 Google Apps Script 最新版本**：
-   - 開啟 Google Apps Script 專案編輯器，將最新的 [`index.html`](file:///d:/opencode/gas-reading-record/index.html)、[`group.html`](file:///d:/opencode/gas-reading-record/group.html)、[`parent.html`](file:///d:/opencode/gas-reading-record/parent.html) 複製過去。
+   - 開啟 Google Apps Script 專案編輯器，將最新的 [`Code.gs`](file:///d:/opencode/gas-reading-record/Code.gs)、[`index.html`](file:///d:/opencode/gas-reading-record/index.html)、[`group.html`](file:///d:/opencode/gas-reading-record/group.html)、[`parent.html`](file:///d:/opencode/gas-reading-record/parent.html) 複製過去。
    - 點擊「部署」>「管理部署作業」>「編輯」> 版本選擇「建立新版本」> 點擊「部署」，即可讓全班平板即刻生效。
-2. **課堂實際測試與反饋**：
-   - 觀察學童在生生用平板的情境下，對皮卡丘動畫與即時按鈕觸控反饋的喜愛度與互動流暢度。
+2. **課堂實機教學體驗**：
+   - 實際在課堂讓學生修改心得或摘要，測試送出後的更新流暢感與試算表資料即時連動。
 
 ---
 
@@ -43,6 +56,6 @@
 1. **行動裝置輸入框字體不得小於 16px**：
    - iOS/iPadOS Safari 遇到 `< 16px` 的 input 會有自動強制放大頁面的原生行為，後續若調整表單樣式切勿降回 15px。
 2. **圖層深度（Z-Index）管理**：
-   - 確保 `.nav-bar`、`.header-card`、`fieldset`、`.group-sync-card` 等維持在 `z-index: 2` 以上，以保證奔跑的皮卡丘（`z-index: 1`）與漂浮球（`z-index: 0`）永遠退居背景。
+   - 確保 `.nav-bar`、`.header-card`、`fieldset`、`.group-sync-card`、`.submit-action-box` 等維持在 `z-index: 2` 以上，以保證奔跑的皮卡丘（`z-index: 1`）與漂浮球（`z-index: 0`）永遠退居背景。
 3. **校園學術網路環境嚴守純向量原則**：
    - 嚴禁引進非開源或需外連第三方圖床之圖片 URL，純 SVG 向量是國小教學系統在各種網管環境下最穩固無破圖的黃金標準。

@@ -93,14 +93,16 @@ function submitReading(data) {
     }
 
     const group = String((data && data.group) || '').trim().slice(0, 30);
+    const seat = String((data && data.seat) || '').trim().slice(0, 20);
+    const dateStr = String((data && data.date) || '').trim().slice(0, 30);
 
     const row = [
       new Date(),                                                    // 時間戳記（永遠第一欄）
-      String((data && data.date) || '').trim().slice(0, 30),         // 讀報日期
+      dateStr,                                                       // 讀報日期
       section,                                                       // 版面名稱（必填，例：四年級文章、自然科學）
       classCode,                                                     // 班級代號（必填）
       group,                                                         // 組別（新增，例：第 1 組、第 2 組）
-      String((data && data.seat) || '').trim().slice(0, 20),         // 座號
+      seat,                                                          // 座號
       title,                                                         // 文章標題
       String((data && data.keywords) || '').trim().slice(0, 200),    // 關鍵詞（重點詞彙）
       String((data && data.content) || '').trim().slice(0, 500),     // 文章內容在說什麼？
@@ -113,8 +115,49 @@ function submitReading(data) {
     ];
 
     const sheet = getSheet_();
-    sheet.appendRow(row);
-    return { ok: true, count: sheet.getLastRow() - 1 };
+    const lastRow = sheet.getLastRow();
+    let targetRow = Number(data && data.rowIndex) || 0;
+    let isUpdate = false;
+
+    // 1. 若前端有傳入明確的 rowIndex，檢查該列是否符合該班級與座號（避免覆蓋他人紀錄）
+    if (targetRow >= 2 && targetRow <= lastRow) {
+      const checkRow = sheet.getRange(targetRow, 1, 1, 7).getDisplayValues()[0];
+      const rowClass = String(checkRow[3] || '').trim();
+      const rowSeat = String(checkRow[5] || '').trim();
+      if ((!seat || rowSeat === seat) && (!classCode || rowClass === classCode)) {
+        isUpdate = true;
+      } else {
+        targetRow = 0; // 不符則不覆蓋
+      }
+    }
+
+    // 2. 若未指定 rowIndex 或重整後送出，回頭比對是否已有同一天、同班級、同座號、同標題的舊紀錄
+    if (!isUpdate && lastRow > 1 && seat && title) {
+      const scanCount = Math.min(100, lastRow - 1);
+      const startScan = lastRow - scanCount + 1;
+      const scanData = sheet.getRange(startScan, 1, scanCount, 7).getDisplayValues();
+      for (let i = scanData.length - 1; i >= 0; i--) {
+        const rDate = String(scanData[i][1] || '').trim();
+        const rClass = String(scanData[i][3] || '').trim();
+        const rSeat = String(scanData[i][5] || '').trim();
+        const rTitle = String(scanData[i][6] || '').trim();
+        if (rDate === dateStr && rClass === classCode && rSeat === seat && rTitle === title) {
+          targetRow = startScan + i;
+          isUpdate = true;
+          break;
+        }
+      }
+    }
+
+    // 3. 執行更新或新增
+    if (isUpdate && targetRow >= 2) {
+      sheet.getRange(targetRow, 1, 1, row.length).setValues([row]);
+      return { ok: true, count: targetRow - 1, rowIndex: targetRow, isUpdate: true };
+    } else {
+      sheet.appendRow(row);
+      const newRow = sheet.getLastRow();
+      return { ok: true, count: newRow - 1, rowIndex: newRow, isUpdate: false };
+    }
   } finally {
     lock.releaseLock();   // 不管成功失敗都要放開，否則後面的人會一直等
   }
@@ -230,8 +273,48 @@ function submitGroupDiscussion(data) {
     ];
 
     const sheet = getGroupSheet_();
-    sheet.appendRow(row);
-    return { ok: true, count: sheet.getLastRow() - 1 };
+    const lastRow = sheet.getLastRow();
+    const dateStr = String((data && data.date) || '').trim().slice(0, 30);
+    let targetRow = Number(data && data.rowIndex) || 0;
+    let isUpdate = false;
+
+    // 1. 若前端有指定 rowIndex，確認該列班級與組別相符
+    if (targetRow >= 2 && targetRow <= lastRow) {
+      const checkRow = sheet.getRange(targetRow, 1, 1, 4).getDisplayValues()[0];
+      const rClass = String(checkRow[2] || '').trim();
+      const rGroup = String(checkRow[3] || '').trim();
+      if (rClass === classCode && rGroup === group) {
+        isUpdate = true;
+      } else {
+        targetRow = 0;
+      }
+    }
+
+    // 2. 若未指定 rowIndex，比對同一天、同班級、同組別的舊紀錄
+    if (!isUpdate && lastRow > 1) {
+      const scanCount = Math.min(50, lastRow - 1);
+      const startScan = lastRow - scanCount + 1;
+      const scanData = sheet.getRange(startScan, 1, scanCount, 4).getDisplayValues();
+      for (let i = scanData.length - 1; i >= 0; i--) {
+        const rDate = String(scanData[i][1] || '').trim();
+        const rClass = String(scanData[i][2] || '').trim();
+        const rGroup = String(scanData[i][3] || '').trim();
+        if (rDate === dateStr && rClass === classCode && rGroup === group) {
+          targetRow = startScan + i;
+          isUpdate = true;
+          break;
+        }
+      }
+    }
+
+    if (isUpdate && targetRow >= 2) {
+      sheet.getRange(targetRow, 1, 1, row.length).setValues([row]);
+      return { ok: true, count: targetRow - 1, rowIndex: targetRow, isUpdate: true };
+    } else {
+      sheet.appendRow(row);
+      const newRow = sheet.getLastRow();
+      return { ok: true, count: newRow - 1, rowIndex: newRow, isUpdate: false };
+    }
   } finally {
     lock.releaseLock();
   }

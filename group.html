@@ -541,6 +541,7 @@
     }
 
     var currentWebUrl = '';
+    var currentGroupRowIndex = null;
 
     // 初始化日期
     (function initDate() {
@@ -634,15 +635,15 @@
         .withSuccessHandler(function (res) {
           $('send').disabled = false;
           if (res && res.ok) {
-            showStatus('✅ ' + group + ' 選篇登記成功！紀錄已存入試算表。', false);
+            if (res.rowIndex) {
+              currentGroupRowIndex = res.rowIndex;
+            }
+            if (res.isUpdate) {
+              showStatus('🎉 ' + group + ' 選篇紀錄已成功更新！', false);
+            } else {
+              showStatus('✅ ' + group + ' 選篇登記成功！紀錄已存入試算表。內容已保留，若需修改可直接在上方修正再按送出。', false);
+            }
             showDirectPersonalButtons(classCode, section1, title1, section2, title2, group);
-
-            $('members').value = '';
-            $('section1').value = '';
-            $('title1').value = '';
-            $('section2').value = '';
-            $('title2').value = '';
-            $('reason').value = '';
           } else {
             showStatus('送出失敗：' + ((res && res.error) || '未知原因'), true);
           }
@@ -652,6 +653,7 @@
           showStatus('送出失敗：' + err.message, true);
         })
         .submitGroupDiscussion({
+          rowIndex: currentGroupRowIndex,
           date: $('date').value,
           classCode: classCode,
           group: group,

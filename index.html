@@ -278,9 +278,63 @@
       background-color: #f0fdf4 !important;
     }
     /* UI 圖層確保置於動態背景之上 */
-    .nav-bar, .header-card, fieldset, .group-sync-card, button#send, #status, .note {
+    .nav-bar, .header-card, fieldset, .group-sync-card, .submit-action-box, button#send, #status, .note {
       position: relative;
       z-index: 2;
+    }
+
+    /* 送出與修改保留控制區 */
+    .submit-action-box {
+      margin: 10px 0 10px;
+    }
+    .edit-notice-box {
+      margin-top: 10px;
+      padding: 12px 14px;
+      background: #f0fdf4;
+      border: 1.5px solid #86efac;
+      border-radius: 12px;
+      font-size: 13.5px;
+      color: #166534;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
+      animation: cardEnter 240ms var(--ease-out);
+    }
+    .btn-clear-new {
+      padding: 8px 14px;
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 9px;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      white-space: nowrap;
+      transition: transform 140ms var(--ease-out), background 160ms var(--ease-out), border-color 160ms var(--ease-out);
+    }
+    .btn-clear-new:active {
+      transform: scale(0.96);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .btn-clear-new:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+        color: #1e293b;
+      }
+    }
+    button#send.is-submitted {
+      background: linear-gradient(135deg, #10b981, #059669);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    button#send.has-changes {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
     }
 
     /* === 寶可夢探險背景動畫系統 (60fps GPU 合成層、低干擾、純向量) === */
@@ -651,7 +705,15 @@
     </div>
   </fieldset>
 
-  <button id="send">🚀 送出讀報探險紀錄</button>
+  <div class="submit-action-box">
+    <button id="send">🚀 送出讀報探險紀錄</button>
+    <div id="editNoticeBox" class="edit-notice-box" style="display:none;">
+      <div style="flex: 1; min-width: 200px;">
+        <span>💡 <strong>內容已保留在畫面上</strong>：若老師請你修改某個格子（例如摘要或心得），直接在上方修改該格，點「更新送出紀錄」即可！</span>
+      </div>
+      <button type="button" id="btnClearNew" class="btn-clear-new">📝 清空填寫新篇章</button>
+    </div>
+  </div>
   <p id="status"></p>
   <p class="note">填完送出後，你的紀錄會存進老師的試算表。</p>
 
@@ -659,12 +721,30 @@
     // ⚠️ 前端 JS 只能寫在這裡（index.html 的 script 區塊），不要另存成 .gs 檔
     var $ = function (id) { return document.getElementById(id); };
 
+    var currentSubmissionRow = null;
+    var isSubmitted = false;
+    var hasUnsavedChanges = false;
+
     function show(text, isError) {
       var el = $('status');
       el.textContent = text;
       el.className = isError ? 'error' : '';
     }
     function lock(on) { $('send').disabled = on; }
+
+    function updateSubmitBtnState() {
+      var btn = $('send');
+      if (!isSubmitted) {
+        btn.className = '';
+        btn.textContent = '🚀 送出讀報探險紀錄';
+      } else if (hasUnsavedChanges) {
+        btn.className = 'has-changes';
+        btn.textContent = '✨ 偵測到修改，點此更新送出！';
+      } else {
+        btn.className = 'is-submitted';
+        btn.textContent = '💾 內容已送出（若需修改，直接改格子再點此更新）';
+      }
+    }
 
     // 預設填入今日日期（若尚未填寫）
     (function initDate() {
@@ -686,12 +766,28 @@
         starLabels.forEach(function (label, i) {
           label.querySelector('span').className = (i < val) ? 'on' : '';
         });
+        saveStorage();
+        if (isSubmitted) {
+          hasUnsavedChanges = true;
+          updateSubmitBtnState();
+        }
       });
     });
 
     function getRating() {
       var checked = document.querySelector('#stars input:checked');
       return checked ? Number(checked.value) : 0;
+    }
+
+    function setRating(val) {
+      if (!val) return;
+      var radio = document.querySelector('#stars input[value="' + val + '"]');
+      if (radio) {
+        radio.checked = true;
+        starLabels.forEach(function (label, i) {
+          label.querySelector('span').className = (i < val) ? 'on' : '';
+        });
+      }
     }
 
     function resetRating() {
@@ -710,14 +806,36 @@
       return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    // 本地快取（平板專用記憶：班級、組別、座號，省去學生重複輸入）
+    // 本地快取（平板專用記憶：包含班級座號，以及草稿自動存檔，確保學生不論重整或修正皆不遺失）
     function saveStorage() {
       try {
-        if (window.localStorage) {
-          localStorage.setItem('poke_classCode', $('classCode').value.trim());
-          localStorage.setItem('poke_group', $('group').value);
-          localStorage.setItem('poke_seat', $('seat').value.trim());
+        if (!window.localStorage) return;
+        localStorage.setItem('poke_classCode', $('classCode').value.trim());
+        localStorage.setItem('poke_group', $('group').value);
+        localStorage.setItem('poke_seat', $('seat').value.trim());
+        localStorage.setItem('poke_date', $('date').value);
+        localStorage.setItem('poke_section', $('section').value);
+        localStorage.setItem('poke_title', $('title').value);
+        localStorage.setItem('poke_keywords', $('keywords').value);
+        localStorage.setItem('poke_content', $('content').value);
+        localStorage.setItem('poke_summary', $('summary').value);
+        localStorage.setItem('poke_reflection', $('reflection').value);
+        localStorage.setItem('poke_learned', $('learned').value);
+        localStorage.setItem('poke_question', $('question').value);
+        localStorage.setItem('poke_wantToKnow', $('wantToKnow').value);
+        localStorage.setItem('poke_rating', getRating());
+        if (currentSubmissionRow) {
+          localStorage.setItem('poke_lastRowIndex', currentSubmissionRow);
         }
+        localStorage.setItem('poke_isSubmitted', isSubmitted ? '1' : '0');
+      } catch (e) {}
+    }
+
+    function clearStorageDraft() {
+      try {
+        if (!window.localStorage) return;
+        var keys = ['poke_section', 'poke_title', 'poke_keywords', 'poke_content', 'poke_summary', 'poke_reflection', 'poke_learned', 'poke_question', 'poke_wantToKnow', 'poke_rating', 'poke_lastRowIndex', 'poke_isSubmitted'];
+        keys.forEach(function (k) { localStorage.removeItem(k); });
       } catch (e) {}
     }
 
@@ -730,6 +848,43 @@
         if (c && !$('classCode').value) $('classCode').value = c;
         if (g && !$('group').value) $('group').value = g;
         if (s && !$('seat').value) $('seat').value = s;
+
+        var d = localStorage.getItem('poke_date');
+        var sec = localStorage.getItem('poke_section');
+        var tit = localStorage.getItem('poke_title');
+        var kw = localStorage.getItem('poke_keywords');
+        var con = localStorage.getItem('poke_content');
+        var sum = localStorage.getItem('poke_summary');
+        var ref = localStorage.getItem('poke_reflection');
+        var lrn = localStorage.getItem('poke_learned');
+        var q = localStorage.getItem('poke_question');
+        var w = localStorage.getItem('poke_wantToKnow');
+        var r = localStorage.getItem('poke_rating');
+        var row = localStorage.getItem('poke_lastRowIndex');
+        var sub = localStorage.getItem('poke_isSubmitted');
+
+        if (d && !$('date').value) $('date').value = d;
+        if (sec && !$('section').value) $('section').value = sec;
+        if (tit && !$('title').value) $('title').value = tit;
+        if (kw && !$('keywords').value) $('keywords').value = kw;
+        if (con && !$('content').value) $('content').value = con;
+        if (sum && !$('summary').value) $('summary').value = sum;
+        if (ref && !$('reflection').value) $('reflection').value = ref;
+        if (lrn && !$('learned').value) $('learned').value = lrn;
+        if (q && !$('question').value) $('question').value = q;
+        if (w && !$('wantToKnow').value) $('wantToKnow').value = w;
+        if (r) setRating(parseInt(r, 10));
+
+        if (row) {
+          currentSubmissionRow = parseInt(row, 10);
+        }
+        if (sub === '1') {
+          isSubmitted = true;
+          hasUnsavedChanges = false;
+          updateSubmitBtnState();
+          $('editNoticeBox').style.display = 'flex';
+          show('📋 已載入剛才送出的紀錄。若老師需要你修改，可直接在上方格子修改後點按鈕更新！', false);
+        }
       } catch (e) {}
     }
 
@@ -745,6 +900,15 @@
       void secInput.offsetWidth; // 觸發重繪
       secInput.classList.add('auto-filled');
       titleInput.classList.add('auto-filled');
+
+      // 帶入新文章時，重置送出狀態
+      currentSubmissionRow = null;
+      isSubmitted = false;
+      hasUnsavedChanges = false;
+      updateSubmitBtnState();
+      $('editNoticeBox').style.display = 'none';
+
+      saveStorage();
 
       show('✅ 已成功帶入文章：' + (sec ? '【' + sec + '】' : '') + tit + '！訓練家請開始填寫心得！', false);
     }
@@ -858,6 +1022,34 @@
     $('seat').addEventListener('change', saveStorage);
     $('btnRefreshGroup').addEventListener('click', fetchGroupArticles);
 
+    // 監聽所有文章欄位變動，自動存檔並在已送出時提示可再次更新
+    var articleFields = ['section', 'title', 'keywords', 'content', 'summary', 'reflection', 'learned', 'question', 'wantToKnow'];
+    articleFields.forEach(function (id) {
+      var el = $(id);
+      if (!el) return;
+      el.addEventListener('input', function () {
+        saveStorage();
+        if (isSubmitted) {
+          hasUnsavedChanges = true;
+          updateSubmitBtnState();
+        }
+      });
+    });
+
+    // 供學生需要填寫新文章時主動清空
+    $('btnClearNew').addEventListener('click', function () {
+      if (confirm('確定要清空目前填寫的內容，開始寫新的一篇文章嗎？\n（已送出的紀錄已安全存在試算表，不會遺失）')) {
+        clearArticleForm();
+        clearStorageDraft();
+        currentSubmissionRow = null;
+        isSubmitted = false;
+        hasUnsavedChanges = false;
+        updateSubmitBtnState();
+        $('editNoticeBox').style.display = 'none';
+        show('已清空欄位，可以開始記錄新文章！', false);
+      }
+    });
+
     function clearArticleForm() {
       // 保持 date, classCode, group, seat，只清空文章內容與評分
       $('section').value = '';
@@ -892,8 +1084,20 @@
         .withSuccessHandler(function (res) {
           lock(false);
           if (res && res.ok) {
-            clearArticleForm();
-            show('✅ 已成功送出！這是第 ' + res.count + ' 筆紀錄。', false);
+            isSubmitted = true;
+            hasUnsavedChanges = false;
+            if (res.rowIndex) {
+              currentSubmissionRow = res.rowIndex;
+            }
+            saveStorage();
+            updateSubmitBtnState();
+            $('editNoticeBox').style.display = 'flex';
+
+            if (res.isUpdate) {
+              show('🎉 已成功更新紀錄！（修正內容已同步至試算表）', false);
+            } else {
+              show('✅ 已成功送出！這是第 ' + res.count + ' 筆紀錄。內容已為你保留在畫面上，若老師請你修改，直接修改該格再點送出即可！', false);
+            }
           } else {
             show('送出失敗：' + ((res && res.error) || '未知原因'), true);
           }
@@ -903,6 +1107,7 @@
           show('送出失敗：' + err.message, true);
         })
         .submitReading({
+          rowIndex: currentSubmissionRow,
           date: $('date').value,
           section: section,
           classCode: $('classCode').value,
